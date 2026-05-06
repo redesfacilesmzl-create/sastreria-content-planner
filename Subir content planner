@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Sastrería Digital — Content Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --navy:#153150;--orange:#ED6F21;--black:#1a1a1a;--white:#fff;
+  --bg:#f5f6f8;--surface:#fff;--border:#e2e5ea;
+  --text:#1a1a1a;--muted:#6b7280;--light:#f0f2f5;
+  --pending:#f59e0b;--inprogress:#3b82f6;--done:#10b981;
+  --shadow:0 2px 8px rgba(0,0,0,0.08);
+  --shadow-lg:0 8px 24px rgba(0,0,0,0.12);
+}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:220px;background:var(--navy);flex-shrink:0;display:flex;flex-direction:column;overflow:hidden}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.content{flex:1;overflow-y:auto;padding:24px}
+
+.logo{padding:20px 16px 16px;border-bottom:1px solid rgba(255,255,255,0.1)}
+.logo-label{color:rgba(255,255,255,0.45);font-size:10px;font-weight:500;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px}
+.logo-brand{color:var(--orange);font-size:17px;font-weight:700;line-height:1.2}
+.logo-sub{color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px}
+.nav{padding:12px 8px;flex:1}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,0.6);font-size:13px;font-weight:500;transition:all 0.15s;margin-bottom:2px;user-select:none}
+.nav-item:hover{background:rgba(255,255,255,0.08);color:var(--white)}
+.nav-item.active{background:var(--orange);color:var(--white)}
+.nav-icon{width:16px;height:16px;flex-shrink:0}
+.nav-section{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.3);padding:12px 12px 6px;margin-top:8px}
+
+.page-title{font-size:16px;font-weight:600}
+.topbar-actions{display:flex;gap:10px;align-items:center}
+.btn{padding:7px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all 0.15s;font-family:'Outfit',sans-serif}
+.btn-primary{background:var(--orange);color:var(--white)}
+.btn-primary:hover{background:#d4601a}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-outline:hover{background:var(--light)}
+.btn-navy{background:var(--navy);color:var(--white)}
+.btn-navy:hover{background:#1d3f63}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-icon{padding:7px;display:flex;align-items:center;justify-content:center}
+
+.cal-header{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border-radius:8px 8px 0 0;overflow:hidden}
+.cal-day-header{background:var(--navy);color:rgba(255,255,255,0.7);font-size:11px;font-weight:600;text-transform:uppercase;padding:8px;text-align:center;letter-spacing:1px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border-radius:0 0 8px 8px;overflow:hidden}
+.cal-cell{background:var(--surface);min-height:110px;padding:8px;cursor:default}
+.cal-cell.other-month{background:#fafafa}
+.cal-cell.today{background:#fff8f5}
+.cal-date{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px}
+.today-dot{color:white!important;background:var(--orange);width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px}
+.cal-pub{padding:3px 6px;border-radius:4px;font-size:10px;font-weight:500;margin-bottom:3px;cursor:pointer;transition:opacity 0.15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal-pub:hover{opacity:0.75}
+.add-pub-btn{width:100%;border:1px dashed var(--border);background:transparent;border-radius:4px;padding:3px;font-size:10px;color:var(--muted);cursor:pointer;font-family:'Outfit',sans-serif;margin-top:4px;transition:all 0.15s}
+.add-pub-btn:hover{border-color:var(--orange);color:var(--orange)}
+
+.status-pending{background:#fef3c7;color:#92400e}
+.status-inprogress{background:#dbeafe;color:#1e40af}
+.status-done{background:#d1fae5;color:#065f46}
+.status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600}
+
+.unit-Turismo{background:#fce7f3;color:#be185d}
+.unit-Merchandising{background:#ede9fe;color:#6d28d9}
+.unit-Educación{background:#dbeafe;color:#1d4ed8}
+.unit-Gastronomía{background:#d1fae5;color:#065f46}
+.unit-Cultura{background:#fef3c7;color:#92400e}
+.unit-default{background:#f3f4f6;color:#374151}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:var(--surface);border-radius:16px;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+.modal-lg{max-width:800px}
+.modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:10}
+.modal-title{font-size:16px;font-weight:600}
+.modal-body{padding:24px}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}
+.close-btn{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);padding:4px;line-height:1}
+.close-btn:hover{color:var(--text)}
+
+.form-group{margin-bottom:16px}
+.form-label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;display:block}
+.form-control{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:'Outfit',sans-serif;color:var(--text);background:var(--surface);transition:border-color 0.15s}
+.form-control:focus{outline:none;border-color:var(--orange)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+textarea.form-control{resize:vertical;min-height:80px}
+
+.card{background:var(--surface);border-radius:12px;border:1px solid var(--border);padding:20px;margin-bottom:16px}
+.card-title{font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.stat-box{background:var(--light);border-radius:8px;padding:14px;text-align:center}
+.stat-num{font-size:24px;font-weight:700;color:var(--navy)}
+.stat-lbl{font-size:11px;color:var(--muted);margin-top:2px}
+
+.phase-card{border:1px solid var(--border);border-radius:12px;margin-bottom:12px;overflow:hidden}
+.phase-header{padding:12px 16px;background:var(--light);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.phase-title{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+.phase-num{width:22px;height:22px;border-radius:50%;background:var(--navy);color:white;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.phase-body{padding:16px;display:none}
+.phase-body.open{display:block}
+.phase-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block}
+.phase-dot.pending{background:var(--pending)}
+.phase-dot.inprogress{background:var(--inprogress)}
+.phase-dot.done{background:var(--done)}
+
+.comment{border-left:2px solid var(--border);padding:8px 12px;margin-bottom:8px;border-radius:0 6px 6px 0}
+.comment-admin{border-color:var(--orange);background:#fff8f5}
+.comment-meta{font-size:11px;color:var(--muted);margin-bottom:4px}
+.comment-text{font-size:13px;line-height:1.5}
+
+.pub-row{display:grid;grid-template-columns:80px 1fr 130px 140px 100px 80px 110px;gap:0;padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.1s;align-items:center}
+.pub-row:hover{background:var(--light)}
+.pub-row:last-child{border-bottom:none}
+
+.chat-area{height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:16px;background:var(--light);margin-bottom:12px}
+.chat-msg{margin-bottom:12px}
+.chat-msg.user{text-align:right}
+.chat-bubble{display:inline-block;padding:9px 13px;border-radius:10px;font-size:13px;max-width:82%;text-align:left;line-height:1.6}
+.chat-msg.user .chat-bubble{background:var(--navy);color:white}
+.chat-msg.ai .chat-bubble{background:var(--surface);border:1px solid var(--border);color:var(--text)}
+.chat-who{font-size:10px;color:var(--muted);margin-bottom:3px}
+.chat-input-row{display:flex;gap:8px}
+.chat-input{flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'Outfit',sans-serif}
+.chat-input:focus{outline:none;border-color:var(--orange)}
+
+.chip{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.phase-pip{width:18px;height:6px;border-radius:3px;display:inline-block}
+.metric-input{padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:100%;font-family:'Outfit',sans-serif;text-align:center}
+.metric-input:focus{outline:none;border-color:var(--orange)}
+
+.loading{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;padding:8px 0}
+.spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--orange);border-radius:50%;animation:spin 0.6s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.ai-result{margin-top:16px;padding:16px;border-radius:10px;border-left:3px solid var(--orange);background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--orange)}
+
+@media(max-width:900px){
+  .sidebar{width:64px}
+  .logo-label,.logo-sub,.nav-item span,.nav-section{display:none}
+  .logo-brand{font-size:13px}
+  .form-row{grid-template-columns:1fr}
+  .pub-row{grid-template-columns:60px 1fr 80px 80px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="sidebar">
+  <div class="logo">
+    <div class="logo-label">La</div>
+    <div class="logo-brand">Sastrería<br>Digital</div>
+    <div class="logo-sub">Content Planner</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">Principal</div>
+    <div class="nav-item active" onclick="navigate('calendar')">
+      <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>Calendario</span>
+    </div>
+    <div class="nav-item" onclick="navigate('publications')">
+      <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <span>Publicaciones</span>
+    </div>
+    <div class="nav-section">Herramientas</div>
+    <div class="nav-item" onclick="navigate('units')">
+      <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      <span>Unidades</span>
+    </div>
+    <div class="nav-item" onclick="navigate('ai')">
+      <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9" stroke-width="3" stroke-linecap="round"/><line x1="15" y1="9" x2="15.01" y2="9" stroke-width="3" stroke-linecap="round"/></svg>
+      <span>Asistente IA</span>
+    </div>
+    <div class="nav-item" onclick="navigate('metrics')">
+      <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span>Métricas</span>
+    </div>
+  </nav>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div class="page-title" id="page-title">📅 Calendario de Contenido</div>
+    <div class="topbar-actions">
+      <button class="btn btn-outline btn-sm" onclick="navigate('units')">⚙ Unidades</button>
+      <button class="btn btn-primary btn-sm" onclick="openNewPub()">+ Nueva Publicación</button>
+    </div>
+  </div>
+  <div class="content" id="main-content"></div>
+</div>
+</div>
+
+<!-- MODAL NUEVA PUBLICACIÓN -->
+<div class="modal-overlay" id="modal-new" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Nueva Publicación</div>
+      <button class="close-btn" onclick="closeModal('modal-new')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">ID Publicación *</label>
+          <input class="form-control" id="f-id" placeholder="PUB-001" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Unidad *</label>
+          <select class="form-control" id="f-unit">
+            <option value="">Selecciona unidad...</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Responsable *</label>
+          <input class="form-control" id="f-resp" placeholder="Nombre del responsable" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha programada *</label>
+          <input class="form-control" id="f-date" type="date" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Propuesta de Guión *</label>
+        <textarea class="form-control" id="f-script" placeholder="Describe el concepto, mensaje principal, estructura del contenido..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Enlace de referencia</label>
+        <input class="form-control" id="f-ref" placeholder="https://..." />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status inicial</label>
+        <select class="form-control" id="f-status">
+          <option value="pending">Pendiente</option>
+          <option value="inprogress">En proceso</option>
+          <option value="done">Realizada</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-new')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveNewPub()">Crear Publicación</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE -->
+<div class="modal-overlay" id="modal-detail" style="display:none">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="detail-title">Publicación</div>
+        <div style="font-size:12px;color:var(--muted)" id="detail-sub"></div>
+      </div>
+      <button class="close-btn" onclick="closeModal('modal-detail')">×</button>
+    </div>
+    <div class="modal-body" id="modal-detail-body"></div>
+  </div>
+</div>
+
+<script>
+var state = {
+  currentView: 'calendar',
+  currentMonth: new Date().getMonth(),
+  currentYear: new Date().getFullYear(),
+  units: ['Turismo','Merchandising','Educación','Gastronomía','Cultura'],
+  publications: [
+    {
+      id:'PUB-001', unit:'Turismo', responsible:'Ana Gómez', date: getToday(),
+      script:'Video mostrando los mejores miradores de Manizales al atardecer. Incluir datos históricos y turísticos.', ref:'https://visitmanizales.com',
+      status:'inprogress', createdAt: getToday(),
+      phases:{
+        planning:{status:'done', notes:'Aprobado por dirección'},
+        production:{status:'inprogress', link:'', notes:'En rodaje en Cable Aéreo'},
+        editing:{status:'pending', fileLink:'', notes:'', comments:[]},
+        publish:{status:'pending', publishDate:'', platform:''}
+      },
+      metrics:{views:0, reach:0, interactions:0, shares:0, saves:0}
+    }
+  ],
+  aiContext: {business:'', market:'', messages:[]},
+  editingPubId: null
+};
+
+function getToday(){
+  return new Date().toISOString().slice(0,10);
+}
+
+function navigate(view){
+  state.currentView = view;
+  document.querySelectorAll('.nav-item').forEach(function(el){el.classList.remove('active');});
+  var navMap = {calendar:0, publications:1, units:2, ai:3, metrics:4};
+  var items = document.querySelectorAll('.nav-item');
+  if(items[navMap[view]]) items[navMap[view]].classList.add('active');
+  var titles = {
+    calendar:'📅 Calendario de Contenido',
+    publications:'📋 Publicaciones',
+    units:'🗂 Gestión de Unidades',
+    ai:'🤖 Asistente IA',
+    metrics:'📊 Métricas y Evaluación'
+  };
+  document.getElementById('page-title').textContent = titles[view]||view;
+  renderView(view);
+}
+
+function renderView(view){
+  var c = document.getElementById('main-content');
+  if(view==='calendar') renderCalendar(c);
+  else if(view==='publications') renderPublications(c);
+  else if(view==='units') renderUnitsPage(c);
+  else if(view==='ai') renderAI(c);
+  else if(view==='metrics') renderMetrics(c);
+}
+
+/* ====== CALENDAR ====== */
+function renderCalendar(c){
+  var days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  var months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var y = state.currentYear, m = state.currentMonth;
+  var first = new Date(y, m, 1).getDay();
+  var daysInMonth = new Date(y, m+1, 0).getDate();
+  var daysInPrev = new Date(y, m, 0).getDate();
+  var today = new Date();
+
+  var cells = '';
+  for(var i = first-1; i >= 0; i--){
+    cells += '<div class="cal-cell other-month"><div class="cal-date">'+(daysInPrev-i)+'</div></div>';
+  }
+  for(var d = 1; d <= daysInMonth; d++){
+    var dateStr = y+'-'+pad(m+1)+'-'+pad(d);
+    var isToday = today.getFullYear()===y && today.getMonth()===m && today.getDate()===d;
+    var pubs = state.publications.filter(function(p){return p.date===dateStr;});
+    var dateHtml = isToday ? '<div class="cal-date"><span class="today-dot">'+d+'</span></div>' : '<div class="cal-date">'+d+'</div>';
+    var pubsHtml = pubs.map(function(p){
+      var cls = unitClass(p.unit);
+      return '<div class="cal-pub '+cls+'" onclick="openDetail(\''+p.id+'\')" title="'+p.id+': '+escHtml(p.script.substring(0,60))+'...">['+p.id+'] '+escHtml(p.unit)+'</div>';
+    }).join('');
+    cells += '<div class="cal-cell'+(isToday?' today':'')+'">'+dateHtml+pubsHtml+'<button class="add-pub-btn" onclick="openNewPubDate(\''+dateStr+'\')">+ agregar</button></div>';
+  }
+  var total = first + daysInMonth;
+  var remaining = total%7===0 ? 0 : 7-(total%7);
+  for(var j = 1; j <= remaining; j++){
+    cells += '<div class="cal-cell other-month"><div class="cal-date">'+j+'</div></div>';
+  }
+
+  var legend = ['<span class="chip status-pending">● Pendiente</span>','<span class="chip status-inprogress">● En proceso</span>','<span class="chip status-done">● Realizada</span>'].join('');
+
+  c.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">'
+    +'<div style="display:flex;align-items:center;gap:12px">'
+    +'<button class="btn btn-outline btn-icon" onclick="prevMonth()">‹</button>'
+    +'<h2 style="font-size:18px;font-weight:600">'+months[m]+' '+y+'</h2>'
+    +'<button class="btn btn-outline btn-icon" onclick="nextMonth()">›</button>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px">'+legend+'</div>'
+    +'</div>'
+    +'<div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);overflow:hidden">'
+    +'<div class="cal-header">'+days.map(function(d){return '<div class="cal-day-header">'+d+'</div>';}).join('')+'</div>'
+    +'<div class="cal-grid">'+cells+'</div>'
+    +'</div>';
+}
+
+function prevMonth(){ state.currentMonth--; if(state.currentMonth<0){state.currentMonth=11;state.currentYear--;} renderView('calendar'); }
+function nextMonth(){ state.currentMonth++; if(state.currentMonth>11){state.currentMonth=0;state.currentYear++;} renderView('calendar'); }
+function pad(n){ return String(n).padStart(2,'0'); }
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ====== PUBLICATIONS ====== */
+function renderPublications(c){
+  var pubs = state.publications;
+  var colColors = {pending:'#f59e0b',inprogress:'#3b82f6',done:'#10b981'};
+  var rows = pubs.map(function(p){
+    var pips = ['planning','production','editing','publish'].map(function(ph,i){
+      return '<span class="phase-pip" style="background:'+(colColors[p.phases[ph].status]||'#e2e5ea')+'" title="'+(['Plan','Prod','Edit','Pub'][i])+': '+p.phases[ph].status+'"></span>';
+    }).join('');
+    return '<div class="pub-row" onclick="openDetail(\''+p.id+'\')"><span style="font-size:12px;font-weight:600;color:var(--muted)">'+p.id+'</span><span style="font-size:13px">'+escHtml(p.script.substring(0,50))+'...</span><span><span class="chip '+unitClass(p.unit)+'">'+escHtml(p.unit)+'</span></span><span style="font-size:12px;color:var(--muted)">'+escHtml(p.responsible)+'</span><span style="font-size:12px;color:var(--muted)">'+p.date+'</span><span style="display:flex;gap:3px;align-items:center">'+pips+'</span><span class="status-badge '+statusClass(p.status)+'">'+statusLabel(p.status)+'</span></div>';
+  }).join('');
+
+  var unitOpts = state.units.map(function(u){return '<option value="'+u+'">'+u+'</option>';}).join('');
+  c.innerHTML = '<div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);overflow:hidden">'
+    +'<div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">'
+    +'<div style="font-weight:600;font-size:14px">'+pubs.length+' publicaciones</div>'
+    +'<select class="form-control" style="width:160px;padding:6px 10px;font-size:12px"><option value="">Todas las unidades</option>'+unitOpts+'</select>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:80px 1fr 130px 140px 100px 80px 110px;padding:8px 16px;background:var(--light);border-bottom:1px solid var(--border);">'
+    +['ID','Concepto','Unidad','Responsable','Fecha','Fases','Status'].map(function(h){return '<div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px">'+h+'</div>';}).join('')
+    +'</div>'
+    +(rows||'<div style="padding:40px;text-align:center;color:var(--muted)">No hay publicaciones aún</div>')
+    +'</div>';
+}
+
+/* ====== DETAIL ====== */
+function openDetail(id){
+  var p = state.publications.find(function(x){return x.id===id;});
+  if(!p) return;
+  state.editingPubId = id;
+  document.getElementById('detail-title').textContent = p.id+' — '+p.unit;
+  document.getElementById('detail-sub').textContent = 'Responsable: '+p.responsible+' | Fecha: '+p.date;
+
+  function phaseSelect(phase, currentStatus){
+    return '<select class="form-control" style="width:130px;font-size:12px;padding:4px 8px" onclick="event.stopPropagation()" onchange="updatePhaseStatus(\''+id+'\',\''+phase+'\',this.value)">'
+      +'<option value="pending"'+(currentStatus==='pending'?' selected':'')+'>Pendiente</option>'
+      +'<option value="inprogress"'+(currentStatus==='inprogress'?' selected':'')+'>En proceso</option>'
+      +'<option value="done"'+(currentStatus==='done'?' selected':'')+'>Realizada</option>'
+      +'</select>';
+  }
+
+  var ph = p.phases;
+
+  var plan = '<div class="phase-card">'
+    +'<div class="phase-header" onclick="togglePhase(\'ph1\')">'
+    +'<div class="phase-title"><div class="phase-num">1</div> 📝 Planteamiento <span class="phase-dot '+ph.planning.status+'"></span></div>'
+    +phaseSelect('planning', ph.planning.status)
+    +'</div>'
+    +'<div class="phase-body open" id="ph1">'
+    +'<div class="form-row">'
+    +'<div><div class="form-label">Guión / Concepto</div><div style="font-size:13px;line-height:1.6;background:var(--light);padding:10px;border-radius:8px">'+escHtml(p.script)+'</div>'
+    +(p.ref?'<div class="form-label" style="margin-top:10px">Referencia</div><a href="'+p.ref+'" target="_blank" style="color:var(--orange);font-size:13px;word-break:break-all">'+p.ref+'</a>':'')
+    +'</div>'
+    +'<div><div class="form-label">Notas de planteamiento</div>'
+    +'<textarea class="form-control" onchange="updatePhaseNotes(\''+id+'\',\'planning\',this.value)">'+escHtml(ph.planning.notes)+'</textarea></div>'
+    +'</div></div></div>';
+
+  var prod = '<div class="phase-card">'
+    +'<div class="phase-header" onclick="togglePhase(\'ph2\')">'
+    +'<div class="phase-title"><div class="phase-num">2</div> 🎬 Producción <span class="phase-dot '+ph.production.status+'"></span></div>'
+    +phaseSelect('production', ph.production.status)
+    +'</div>'
+    +'<div class="phase-body" id="ph2">'
+    +'<div class="form-group"><label class="form-label">Enlace al material resultante</label>'
+    +'<input class="form-control" value="'+escHtml(ph.production.link)+'" placeholder="https://drive.google.com/..." onchange="updatePhaseField(\''+id+'\',\'production\',\'link\',this.value)" /></div>'
+    +'<div class="form-group"><label class="form-label">Observaciones</label>'
+    +'<textarea class="form-control" onchange="updatePhaseNotes(\''+id+'\',\'production\',this.value)">'+escHtml(ph.production.notes)+'</textarea></div>'
+    +'</div></div>';
+
+  var comments = (ph.editing.comments||[]).map(function(cm){
+    return '<div class="comment'+(cm.isAdmin?' comment-admin':'')+'"><div class="comment-meta">'+(cm.isAdmin?'👑 ':'')+escHtml(cm.author)+' · '+cm.date+'</div><div class="comment-text">'+escHtml(cm.text)+'</div></div>';
+  }).join('');
+
+  var edit = '<div class="phase-card">'
+    +'<div class="phase-header" onclick="togglePhase(\'ph3\')">'
+    +'<div class="phase-title"><div class="phase-num">3</div> ✂️ Edición <span class="phase-dot '+ph.editing.status+'"></span></div>'
+    +phaseSelect('editing', ph.editing.status)
+    +'</div>'
+    +'<div class="phase-body" id="ph3">'
+    +'<div class="form-group"><label class="form-label">Enlace archivo de video</label>'
+    +'<input class="form-control" value="'+escHtml(ph.editing.fileLink)+'" placeholder="https://..." onchange="updatePhaseField(\''+id+'\',\'editing\',\'fileLink\',this.value)" /></div>'
+    +'<div class="form-group"><label class="form-label">Observaciones</label>'
+    +'<textarea class="form-control" onchange="updatePhaseNotes(\''+id+'\',\'editing\',this.value)">'+escHtml(ph.editing.notes)+'</textarea></div>'
+    +'<div class="form-label">Historial de cambios (Admin)</div>'
+    +'<div id="comments-'+id+'">'+(comments||'<div style="font-size:12px;color:var(--muted);padding:8px 0">Sin comentarios aún</div>')+'</div>'
+    +'<div style="display:flex;gap:8px;margin-top:10px">'
+    +'<input class="form-control" id="cmt-inp-'+id+'" placeholder="Agregar comentario de admin..." />'
+    +'<button class="btn btn-navy btn-sm" onclick="addComment(\''+id+'\')">Comentar</button>'
+    +'</div></div></div>';
+
+  var pPhase = ph.publish;
+  var platOpts = ['','Instagram','TikTok','YouTube','Facebook','LinkedIn'].map(function(v){
+    return '<option value="'+v+'"'+(pPhase.platform===v?' selected':'')+'>'+( v||'Seleccionar...')+'</option>';
+  }).join('');
+
+  var pub = '<div class="phase-card">'
+    +'<div class="phase-header" onclick="togglePhase(\'ph4\')">'
+    +'<div class="phase-title"><div class="phase-num">4</div> 🚀 Publicación <span class="phase-dot '+pPhase.status+'"></span></div>'
+    +'<select class="form-control" style="width:130px;font-size:12px;padding:4px 8px" onclick="event.stopPropagation()" onchange="updatePhaseStatus(\''+id+'\',\'publish\',this.value)">'
+    +'<option value="pending"'+(pPhase.status==='pending'?' selected':'')+'>Pendiente</option>'
+    +'<option value="inprogress"'+(pPhase.status==='inprogress'?' selected':'')+'>En proceso</option>'
+    +'<option value="done"'+(pPhase.status==='done'?' selected':'')+'>Publicada</option>'
+    +'</select></div>'
+    +'<div class="phase-body" id="ph4">'
+    +'<div class="form-row">'
+    +'<div class="form-group"><label class="form-label">Fecha de publicación</label>'
+    +'<input class="form-control" type="date" value="'+(pPhase.publishDate||'')+'" onchange="updatePhaseField(\''+id+'\',\'publish\',\'publishDate\',this.value)" /></div>'
+    +'<div class="form-group"><label class="form-label">Plataforma</label>'
+    +'<select class="form-control" onchange="updatePhaseField(\''+id+'\',\'publish\',\'platform\',this.value)">'+platOpts+'</select></div>'
+    +'</div></div></div>';
+
+  document.getElementById('modal-detail-body').innerHTML =
+    '<div style="background:var(--light);border-radius:10px;padding:12px 16px;margin-bottom:20px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">'
+    +'<div style="flex:1;min-width:200px"><span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">Concepto</span><div style="font-size:13px;margin-top:4px">'+escHtml(p.script.substring(0,120))+(p.script.length>120?'...':'')+'</div></div>'
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+    +'<span class="chip '+unitClass(p.unit)+'">'+escHtml(p.unit)+'</span>'
+    +'<span class="status-badge '+statusClass(p.status)+'">'+statusLabel(p.status)+'</span>'
+    +'</div></div>'
+    +plan+prod+edit+pub;
+
+  document.getElementById('modal-detail').style.display = 'flex';
+}
+
+function togglePhase(id){
+  var el = document.getElementById(id);
+  if(el) el.style.display = el.style.display==='none'?'block':'none';
+}
+function updatePhaseStatus(pubId, phase, val){
+  var p = state.publications.find(function(x){return x.id===pubId;});
+  if(p){ p.phases[phase].status = val; updateOverallStatus(p); }
+}
+function updatePhaseNotes(pubId, phase, val){
+  var p = state.publications.find(function(x){return x.id===pubId;});
+  if(p) p.phases[phase].notes = val;
+}
+function updatePhaseField(pubId, phase, field, val){
+  var p = state.publications.find(function(x){return x.id===pubId;});
+  if(p) p.phases[phase][field] = val;
+}
+function updateOverallStatus(p){
+  var ss = ['planning','production','editing','publish'].map(function(ph){return p.phases[ph].status;});
+  if(ss.every(function(s){return s==='done';})) p.status='done';
+  else if(ss.some(function(s){return s==='inprogress'||s==='done';})) p.status='inprogress';
+  else p.status='pending';
+}
+function addComment(pubId){
+  var p = state.publications.find(function(x){return x.id===pubId;});
+  var inp = document.getElementById('cmt-inp-'+pubId);
+  if(!p||!inp||!inp.value.trim()) return;
+  var cm = {author:'Admin', text:inp.value.trim(), date:getToday(), isAdmin:true};
+  if(!p.phases.editing.comments) p.phases.editing.comments = [];
+  p.phases.editing.comments.push(cm);
+  var cont = document.getElementById('comments-'+pubId);
+  if(cont) cont.innerHTML += '<div class="comment comment-admin"><div class="comment-meta">👑 Admin · '+cm.date+'</div><div class="comment-text">'+escHtml(cm.text)+'</div></div>';
+  inp.value = '';
+}
+
+/* ====== NEW PUB ====== */
+function openNewPub(){ populateUnitSelect(); document.getElementById('f-date').value=''; document.getElementById('modal-new').style.display='flex'; }
+function openNewPubDate(dateStr){ populateUnitSelect(); document.getElementById('f-date').value=dateStr; document.getElementById('modal-new').style.display='flex'; }
+function populateUnitSelect(){
+  var sel = document.getElementById('f-unit');
+  sel.innerHTML = '<option value="">Selecciona unidad...</option>'+state.units.map(function(u){return '<option value="'+u+'">'+u+'</option>';}).join('');
+}
+function saveNewPub(){
+  var id = document.getElementById('f-id').value.trim();
+  var unit = document.getElementById('f-unit').value;
+  var resp = document.getElementById('f-resp').value.trim();
+  var date = document.getElementById('f-date').value;
+  var script = document.getElementById('f-script').value.trim();
+  var ref = document.getElementById('f-ref').value.trim();
+  var status = document.getElementById('f-status').value;
+  if(!id||!unit||!resp||!date||!script){ alert('Por favor completa todos los campos obligatorios (*)'); return; }
+  if(state.publications.find(function(p){return p.id===id;})){ alert('Ya existe una publicación con ese ID.'); return; }
+  state.publications.push({
+    id:id, unit:unit, responsible:resp, date:date, script:script, ref:ref, status:status,
+    createdAt:getToday(),
+    phases:{
+      planning:{status:'pending',notes:''},
+      production:{status:'pending',link:'',notes:''},
+      editing:{status:'pending',fileLink:'',notes:'',comments:[]},
+      publish:{status:'pending',publishDate:'',platform:''}
+    },
+    metrics:{views:0,reach:0,interactions:0,shares:0,saves:0}
+  });
+  ['f-id','f-resp','f-date','f-script','f-ref'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('f-unit').value='';
+  document.getElementById('f-status').value='pending';
+  closeModal('modal-new');
+}
+
+/* ====== UNITS ====== */
+function renderUnitsPage(c){
+  var items = state.units.map(function(u,i){
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">'
+      +'<span class="chip '+unitClass(u)+'">'+escHtml(u)+'</span>'
+      +'<button class="btn btn-outline btn-sm" onclick="removeUnit('+i+')" style="color:#dc2626;border-color:#fca5a5">Eliminar</button>'
+      +'</div>';
+  }).join('');
+  c.innerHTML = '<div class="card" style="max-width:520px">'
+    +'<div class="card-title">🗂 Unidades de contenido</div>'
+    +'<p style="font-size:13px;color:var(--muted);margin-bottom:16px">Clasifica tu contenido por categoría o departamento. Las unidades aparecen como filtros y en el formulario de publicación.</p>'
+    +'<div>'+items+'</div>'
+    +'<div style="display:flex;gap:8px;margin-top:16px">'
+    +'<input class="form-control" id="new-unit-page" placeholder="Nueva unidad..." />'
+    +'<button class="btn btn-primary" onclick="addUnitPage()">Agregar</button>'
+    +'</div></div>';
+}
+function addUnitPage(){
+  var v = document.getElementById('new-unit-page').value.trim();
+  if(!v) return;
+  if(!state.units.includes(v)) state.units.push(v);
+  document.getElementById('new-unit-page').value='';
+  renderView('units');
+}
+function removeUnit(i){ state.units.splice(i,1); renderView('units'); }
+
+/* ====== AI ====== */
+function renderAI(c){
+  var msgs = state.aiContext.messages.map(function(m){
+    return '<div class="chat-msg '+m.role+'"><div class="chat-who">'+(m.role==='user'?'👤 Tú':'🤖 Asistente IA')+'</div><div class="chat-bubble">'+m.content.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')+'</div></div>';
+  }).join('');
+
+  var qBtns = [
+    ['Dame 5 ideas de contenido para esta semana basadas en mis unidades: '+state.units.join(', '),'💡 5 ideas esta semana'],
+    ['¿Qué tendencias de contenido aplican para mi tipo de negocio?','📈 Tendencias actuales'],
+    ['Ayúdame a estructurar un calendario de contenido mensual','📅 Planificar calendario'],
+    ['¿Qué tipo de contenido genera más engagement para negocios como el mío?','🔥 Tips de engagement']
+  ].map(function(q){
+    return '<button class="btn btn-outline btn-sm" style="text-align:left" onclick="quickPrompt(\''+q[0].replace(/'/g,"\\'")+'\')">'+ q[1]+'</button>';
+  }).join('');
+
+  c.innerHTML = '<div style="display:grid;grid-template-columns:1fr 320px;gap:20px;max-width:1100px">'
+    +'<div><div class="card">'
+    +'<div class="card-title">🤖 Asistente IA de Contenido</div>'
+    +'<p style="font-size:13px;color:var(--muted);margin-bottom:16px">Configura el contexto de tu negocio y obtén sugerencias de contenido personalizadas.</p>'
+    +'<div class="chat-area" id="chat-area">'+(msgs||'<div style="color:var(--muted);font-size:13px;text-align:center;padding-top:80px">Configura tu contexto de negocio y comienza a chatear →</div>')+'</div>'
+    +'<div class="chat-input-row">'
+    +'<input class="chat-input" id="chat-inp" placeholder="Pide ideas, estrategias, análisis..." onkeydown="if(event.key===\'Enter\')sendAI()" />'
+    +'<button class="btn btn-primary" onclick="sendAI()">Enviar</button>'
+    +'</div></div></div>'
+    +'<div>'
+    +'<div class="card"><div class="card-title">⚙️ Contexto del negocio</div>'
+    +'<div class="form-group"><label class="form-label">Descripción del negocio</label>'
+    +'<textarea class="form-control" id="ai-biz" style="min-height:90px" placeholder="¿A qué se dedica? ¿Cuál es su propuesta de valor?">'+escHtml(state.aiContext.business)+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Mercado objetivo</label>'
+    +'<textarea class="form-control" id="ai-mkt" style="min-height:75px" placeholder="Cliente ideal: edad, intereses, ubicación...">'+escHtml(state.aiContext.market)+'</textarea></div>'
+    +'<button class="btn btn-navy" style="width:100%" onclick="saveAIContext()">Guardar contexto</button>'
+    +'</div>'
+    +'<div class="card"><div class="card-title">💡 Acciones rápidas</div>'
+    +'<div style="display:flex;flex-direction:column;gap:8px">'+qBtns+'</div>'
+    +'</div></div></div>';
+}
+
+function saveAIContext(){
+  state.aiContext.business = document.getElementById('ai-biz').value;
+  state.aiContext.market = document.getElementById('ai-mkt').value;
+  alert('✓ Contexto guardado correctamente');
+}
+function quickPrompt(text){ document.getElementById('chat-inp').value=text; sendAI(); }
+
+function sendAI(){
+  var inp = document.getElementById('chat-inp');
+  var msg = inp.value.trim();
+  if(!msg) return;
+  inp.value='';
+  state.aiContext.messages.push({role:'user', content:msg});
+  var chatArea = document.getElementById('chat-area');
+  chatArea.innerHTML += '<div class="chat-msg user"><div class="chat-who">👤 Tú</div><div class="chat-bubble">'+escHtml(msg)+'</div></div>';
+  chatArea.innerHTML += '<div class="chat-msg ai" id="ai-loading"><div class="chat-who">🤖 Asistente IA</div><div class="chat-bubble"><div class="loading"><div class="spinner"></div> Analizando...</div></div></div>';
+  chatArea.scrollTop = chatArea.scrollHeight;
+
+  var sysPrompt = 'Eres un experto en marketing de contenidos para La Sastrería Digital, una agencia digital.\n'
+    +(state.aiContext.business?'Negocio: '+state.aiContext.business+'\n':'')
+    +(state.aiContext.market?'Mercado objetivo: '+state.aiContext.market+'\n':'')
+    +'Unidades de contenido activas: '+state.units.join(', ')+'.\n'
+    +'Responde en español. Sé concreto, creativo y accionable. Usa listas cuando sea útil.';
+
+  var history = state.aiContext.messages.slice(-8).map(function(m){return {role:m.role, content:m.content};});
+
+  fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:1000,
+      system:sysPrompt,
+      messages:history
+    })
+  }).then(function(r){return r.json();}).then(function(data){
+    var text = (data.content&&data.content[0]&&data.content[0].text)||'Error al obtener respuesta.';
+    state.aiContext.messages.push({role:'assistant', content:text});
+    var loadEl = document.getElementById('ai-loading');
+    if(loadEl) loadEl.outerHTML = '<div class="chat-msg ai"><div class="chat-who">🤖 Asistente IA</div><div class="chat-bubble">'+text.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')+'</div></div>';
+    var ca = document.getElementById('chat-area');
+    if(ca) ca.scrollTop = ca.scrollHeight;
+  }).catch(function(){
+    var loadEl = document.getElementById('ai-loading');
+    if(loadEl) loadEl.outerHTML = '<div class="chat-msg ai"><div class="chat-who">🤖 Asistente IA</div><div class="chat-bubble" style="color:#dc2626">Error de conexión. Verifica tu conexión a internet.</div></div>';
+  });
+}
+
+/* ====== METRICS ====== */
+function renderMetrics(c){
+  var pubs = state.publications;
+  var totalViews = pubs.reduce(function(a,p){return a+(parseInt(p.metrics.views)||0);},0);
+  var totalReach = pubs.reduce(function(a,p){return a+(parseInt(p.metrics.reach)||0);},0);
+  var totalInter = pubs.reduce(function(a,p){return a+(parseInt(p.metrics.interactions)||0);},0);
+
+  var rows = pubs.map(function(p){
+    var m = p.metrics;
+    function minput(field){
+      return '<input class="metric-input" type="number" min="0" value="'+(m[field]||'')+'" placeholder="—" onchange="updateMetric(\''+p.id+'\',\''+field+'\',this.value)" />';
+    }
+    return '<tr><td style="padding:10px 12px;font-size:13px;font-weight:600">'+p.id+'</td>'
+      +'<td style="padding:10px 12px"><span class="chip '+unitClass(p.unit)+'">'+escHtml(p.unit)+'</span></td>'
+      +'<td style="padding:10px 12px;font-size:13px">'+(p.phases.publish.publishDate||'—')+'</td>'
+      +'<td style="padding:10px 12px">'+minput('views')+'</td>'
+      +'<td style="padding:10px 12px">'+minput('reach')+'</td>'
+      +'<td style="padding:10px 12px">'+minput('interactions')+'</td>'
+      +'<td style="padding:10px 12px">'+minput('shares')+'</td>'
+      +'<td style="padding:10px 12px">'+minput('saves')+'</td>'
+      +'<td style="padding:10px 12px"><button class="btn btn-navy btn-sm" onclick="analyzeMetrics(\''+p.id+'\')">🤖 Analizar</button></td>'
+      +'</tr>';
+  }).join('');
+
+  c.innerHTML = '<div class="stat-grid">'
+    +'<div class="stat-box"><div class="stat-num" id="sv">'+totalViews.toLocaleString()+'</div><div class="stat-lbl">Total vistas</div></div>'
+    +'<div class="stat-box"><div class="stat-num" id="sr">'+totalReach.toLocaleString()+'</div><div class="stat-lbl">Alcance total</div></div>'
+    +'<div class="stat-box"><div class="stat-num" id="si">'+totalInter.toLocaleString()+'</div><div class="stat-lbl">Interacciones</div></div>'
+    +'</div>'
+    +'<div class="card">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+    +'<div class="card-title" style="margin:0">📊 Métricas por publicación <span style="font-size:11px;color:var(--muted);font-weight:400">· Ingresar a 7 días de publicado</span></div>'
+    +'<button class="btn btn-primary btn-sm" onclick="analyzeAllMetrics()">🤖 Análisis global</button>'
+    +'</div>'
+    +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'
+    +'<thead><tr style="background:var(--light)">'
+    +['ID','Unidad','Publicado','Vistas','Alcance','Interac.','Compartidos','Guardados','IA'].map(function(h){
+      return '<th style="padding:8px 12px;text-align:'+(h==='ID'||h==='Unidad'||h==='Publicado'?'left':'center')+';font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px">'+h+'</th>';
+    }).join('')
+    +'</tr></thead>'
+    +'<tbody>'+rows+'</tbody>'
+    +'</table></div></div>'
+    +'<div id="metrics-ai-result"></div>';
+}
+
+function updateMetric(pubId, field, val){
+  var p = state.publications.find(function(x){return x.id===pubId;});
+  if(p) p.metrics[field] = parseInt(val)||0;
+  var tv = state.publications.reduce(function(a,p){return a+(parseInt(p.metrics.views)||0);},0);
+  var tr = state.publications.reduce(function(a,p){return a+(parseInt(p.metrics.reach)||0);},0);
+  var ti = state.publications.reduce(function(a,p){return a+(parseInt(p.metrics.interactions)||0);},0);
+  var sv = document.getElementById('sv'); if(sv) sv.textContent = tv.toLocaleString();
+  var sr = document.getElementById('sr'); if(sr) sr.textContent = tr.toLocaleString();
+  var si = document.getElementById('si'); if(si) si.textContent = ti.toLocaleString();
+}
+
+function analyzeMetrics(pubId){
+  var p = state.publications.find(function(x){return x.id===pubId;});
+  if(!p) return;
+  var resultDiv = document.getElementById('metrics-ai-result');
+  resultDiv.innerHTML = '<div class="card" style="margin-top:16px"><div class="loading"><div class="spinner"></div> Analizando métricas de '+p.id+'...</div></div>';
+  fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:900,
+      messages:[{role:'user', content:'Analiza estas métricas de contenido (7 días) y dame recomendaciones:\n'
+        +'- Publicación: '+p.id+' ('+p.unit+')\n'
+        +'- Guión: '+p.script+'\n'
+        +'- Vistas: '+p.metrics.views+', Alcance: '+p.metrics.reach+', Interacciones: '+p.metrics.interactions+', Compartidos: '+p.metrics.shares+', Guardados: '+p.metrics.saves+'\n'
+        +(state.aiContext.business?'- Negocio: '+state.aiContext.business+'\n':'')
+        +'Dame: 1) Evaluación del desempeño, 2) Qué funcionó bien, 3) Oportunidades de mejora, 4) Sugerencias para el próximo contenido similar. En español, práctico y específico.'}]
+    })
+  }).then(function(r){return r.json();}).then(function(data){
+    var text = (data.content&&data.content[0]&&data.content[0].text)||'Error al analizar.';
+    resultDiv.innerHTML = '<div class="card" style="margin-top:16px;border-left:3px solid var(--orange)">'
+      +'<div class="card-title">🤖 Análisis IA — '+p.id+'</div>'
+      +'<div style="font-size:13px;line-height:1.7">'+text.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')+'</div></div>';
+  }).catch(function(){
+    resultDiv.innerHTML = '<div class="card" style="margin-top:16px"><div style="color:#dc2626;font-size:13px">Error al conectar con la IA.</div></div>';
+  });
+}
+
+function analyzeAllMetrics(){
+  var resultDiv = document.getElementById('metrics-ai-result');
+  resultDiv.innerHTML = '<div class="card" style="margin-top:16px"><div class="loading"><div class="spinner"></div> Realizando análisis global...</div></div>';
+  var summary = state.publications.map(function(p){
+    return p.id+'('+p.unit+'): vistas='+p.metrics.views+', alcance='+p.metrics.reach+', interacciones='+p.metrics.interactions+', compartidos='+p.metrics.shares+', guardados='+p.metrics.saves;
+  }).join('\n');
+  fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:1000,
+      messages:[{role:'user', content:'Analiza el desempeño global de estas publicaciones y dame una estrategia de mejora:\n'+summary
+        +'\n'+(state.aiContext.business?'Negocio: '+state.aiContext.business+'\n':'')
+        +'Unidades: '+state.units.join(', ')+'\n'
+        +'Dame: 1) Qué unidad performa mejor, 2) Patrones de engagement, 3) Estrategia para el próximo mes, 4) Tipo de contenido a priorizar. En español, práctico y accionable.'}]
+    })
+  }).then(function(r){return r.json();}).then(function(data){
+    var text = (data.content&&data.content[0]&&data.content[0].text)||'Error al analizar.';
+    resultDiv.innerHTML = '<div class="card" style="margin-top:16px;border-left:3px solid var(--navy)">'
+      +'<div class="card-title">🤖 Análisis global — Todas las publicaciones</div>'
+      +'<div style="font-size:13px;line-height:1.7">'+text.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')+'</div></div>';
+  }).catch(function(){
+    resultDiv.innerHTML = '<div class="card" style="margin-top:16px"><div style="color:#dc2626;font-size:13px">Error al conectar con la IA.</div></div>';
+  });
+}
+
+/* ====== HELPERS ====== */
+function unitClass(unit){
+  var safe = unit ? unit.replace(/[^a-zA-ZÀ-ú]/g,'') : '';
+  var known = ['Turismo','Merchandising','Educación','Gastronomía','Cultura'];
+  return known.includes(unit) ? 'unit-'+unit : 'unit-default';
+}
+function statusClass(s){
+  return {pending:'status-pending',inprogress:'status-inprogress',done:'status-done'}[s]||'status-pending';
+}
+function statusLabel(s){
+  return {pending:'⏳ Pendiente',inprogress:'🔄 En proceso',done:'✅ Realizada'}[s]||s;
+}
+function closeModal(id){
+  document.getElementById(id).style.display='none';
+  renderView(state.currentView);
+}
+
+renderView('calendar');
+</script>
+</body>
+</html>
